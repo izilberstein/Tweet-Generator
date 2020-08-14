@@ -1,10 +1,10 @@
-module Markov where
+module Markov (MChain, State(..), Open(..), newMChain, createMChain, generateStates, textify, Rnd) where
 
 import Data.HashMap.Strict
 import qualified Data.HashMap.Strict as HM
 import Data.List
-import GHC.Generics (Generic)
 import Data.Hashable
+import Data.Char
 import System.Random
 import Control.Monad.Random
 
@@ -20,7 +20,7 @@ opChar :: Open -> Char
 opChar LParen = '('
 opChar RParen = ')'
 opChar DQuote = '\"'
-opChar SQuote = '\''
+
   
 instance Hashable State where
   hashWithSalt salt (Open c) = hashWithSalt 2 $ hashWithSalt salt (opChar c)
@@ -28,6 +28,8 @@ instance Hashable State where
   hashWithSalt salt (Word w) = hashWithSalt 1 $ hashWithSalt salt w
   
 type MChain = HashMap State (HashMap State Int)
+
+newMChain = HM.empty
 
 createMChain :: [State] -> MChain -> MChain  --creates new Markov-Chain given a list of states and an old chain
 createMChain [] m = m
@@ -67,3 +69,34 @@ generateStates oldState m
       return $ oldState : states
     
           
+textify :: [State] -> String
+textify (Open s : []) = [opChar s]
+textify (Word [c] : [])
+  | c == 'i' = "I"
+  | otherwise = [c]
+textify (Word s : []) = s
+textify (state : Open s : ss) = case s of
+                          LParen -> space state (Open s : ss)
+                          RParen -> noSpace state (Open s : ss)
+                          DQuote -> noSpace state (Open s : ss) 
+textify (state : Word [c] : ss)
+  | c `elem` [',', ':', ';'] = noSpace state (Word [c] : ss)
+  | c `elem` ['.', '?', '!'] = noSpace state (Word [c] : toCap ss)
+  | otherwise = space state (Word [c] : ss)
+textify (state : ss) = space state ss 
+
+noSpace :: State -> [State] -> String
+noSpace state ss = textify [state] ++ textify ss
+space :: State -> [State] -> String
+space s@(Open a) ss
+  | a == RParen = noSpace s ss
+  | otherwise = textify [s] ++ " " ++ textify ss
+space s@(Word [c]) ss
+  |  c `elem` ['$', '#', '@', '%'] = noSpace s ss
+  | otherwise = textify [s] ++ " " ++ textify ss
+space state ss = textify [state] ++ " " ++ textify ss
+        
+
+toCap :: [State] -> [State]
+toCap s@(Open o : _ ) = s
+toCap (Word (w:ws) : ss) = (Word (toUpper w : ws) : ss)
