@@ -1,4 +1,4 @@
-module Markov (MChain, State(..), Open(..), newMChain, createMChain, generateStates, textify, Rnd) where
+module Markov (MChain, State(..), Open(..), newMChain, createMChain, generateStates, textify, Rnd, getKeys) where
 
 import Data.HashMap.Strict
 import qualified Data.HashMap.Strict as HM
@@ -50,7 +50,6 @@ constructSTree ((s, f):ss) = Node lTree s f (f + (weight lTree) + (weight rTree)
         rTree = constructSTree $ drop half ss
 
 getState :: STree -> Int -> State
---getState l@Leaf{} _ = state l
 getState tree rank
   | rank <= wl = getState (left tree) rank
   | rank > wl + freq tree = getState (right tree) (rank - wl - (freq tree))
@@ -100,3 +99,8 @@ space state ss = textify [state] ++ " " ++ textify ss
 toCap :: [State] -> [State]
 toCap s@(Open o : _ ) = s
 toCap (Word (w:ws) : ss) = (Word (toUpper w : ws) : ss)
+
+
+getKeys :: MChain -> [State]
+getKeys chain = keys chain 
+  
